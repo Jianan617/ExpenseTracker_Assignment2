@@ -4,10 +4,10 @@ const { authenticateToken, requireAdmin } = require("../middleware/authMiddlewar
 
 const router = express.Router();
 
-router.use(authenticateToken, requireAdmin);
-router.get("/users", adminController.getUsers);
-router.put("/users/:id", adminController.updateUser);
-router.delete("/users/:id", adminController.deleteUser);
-router.get("/activities", adminController.getActivities);
+router.use(authenticateToken, requireAdmin); //it means all admin routes must go through authenticateToken
+router.get("/users", adminController.getUsers); //get all users
+router.put("/users/:id", adminController.updateUser); //update user by id
+router.delete("/users/:id", adminController.deleteUser); //delete user by id
+router.get("/activities", adminController.getActivities); // get all activity logs
 
 module.exports = router;

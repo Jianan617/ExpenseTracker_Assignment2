@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { deleteUser, getActivities, getUsers, updateUser } from "../services/adminService.js";
 import { createCategory, deleteCategory, getCategories, updateCategory } from "../services/categoryService.js";
 
+//format database datetime into local date and/or time.
 function formatDateTime(value) {
     if (!value) return "-";
     return new Date(value).toLocaleString("en-AU", {
@@ -14,19 +15,26 @@ function formatDateTime(value) {
 }
 
 export default function AdminPanel({ user, onNavigate, onLogout }) {
+    //store admin data loaded from backend
     const [users, setUsers] = useState([]);
     const [activities, setActivities] = useState([]);
     const [categories, setCategories] = useState([]);
+
+    //store input value for creating a new category
     const [newCategoryName, setNewCategoryName] = useState("");
+
+    //store application state
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [feedback, setFeedback] = useState("");
 
+    //load users, activity logs and categories together
     const loadAdminData = async () => {
         try {
             setLoading(true);
             setError("");
-            const [userData, activityData, categoryData] = await Promise.all([getUsers(), getActivities(), getCategories()]);
+            const [userData, activityData, categoryData]
+                = await Promise.all([getUsers(), getActivities(), getCategories()]);
             setUsers(userData);
             setActivities(activityData);
             setCategories(categoryData);
@@ -37,26 +45,32 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
+    //load admin data when the page first renders
     useEffect(() => {
         loadAdminData();
     }, []);
 
+    //show temporary success message
     const showFeedback = (message) => {
         setFeedback(message);
         setTimeout(() => setFeedback(""), 3500);
     };
 
+    //update user field locally before saving to backend
     const updateLocalUserField = (id, field, value) => {
         setUsers((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
     };
 
+    //update category name locally before saving to backend
     const updateLocalCategoryName = (id, name) => {
         setCategories((prev) => prev.map((category) => category.id === id ? { ...category, name } : category));
     };
 
+    //save edited user information to backend
     const handleSaveUser = async (item) => {
         try {
             await updateUser(item.id, { username: item.username, email: item.email, role: item.role });
+            //reload latest data after update
             await loadAdminData();
             showFeedback(`User "${item.username}" was updated.`);
         } catch (e) {
@@ -64,10 +78,12 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
+    //delete selected user after confirmation
     const handleDeleteUser = async (item) => {
         if (!window.confirm(`Delete user "${item.username}"?`)) return;
         try {
             await deleteUser(item.id);
+            //reload list after deletion
             await loadAdminData();
             showFeedback(`User "${item.username}" was deleted.`);
         } catch (e) {
@@ -75,11 +91,13 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
+    //create a new category
     const handleCreateCategory = async () => {
         if (!newCategoryName.trim()) return;
         try {
             await createCategory(newCategoryName.trim());
             setNewCategoryName("");
+            //reload categories after creation
             await loadAdminData();
             showFeedback("Category was created.");
         } catch (e) {
@@ -87,9 +105,11 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
+    //save edited category name
     const handleSaveCategory = async (category) => {
         try {
             await updateCategory(category.id, category.name);
+            //reload latest category data
             await loadAdminData();
             showFeedback(`Category "${category.name}" was updated.`);
         } catch (e) {
@@ -97,10 +117,12 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
+    //delete selected category
     const handleDeleteCategory = async (category) => {
         if (!window.confirm(`Delete category "${category.name}"?`)) return;
         try {
             await deleteCategory(category.id);
+            //reload categories after deletion
             await loadAdminData();
             showFeedback(`Category "${category.name}" was deleted.`);
         } catch (e) {

@@ -1,5 +1,6 @@
 import API_BASE_URL, { authHeaders, parseResponse } from "./api";
 
+//fetch all available expense categories from the backend
 export async function getCategories() {
     const response = await fetch(`${API_BASE_URL}/categories`, {
         headers: { ...authHeaders() },
@@ -8,6 +9,7 @@ export async function getCategories() {
     return result.data;
 }
 
+//create a new category
 export async function createCategory(name) {
     const response = await fetch(`${API_BASE_URL}/categories`, {
         method: "POST",
@@ -18,6 +20,8 @@ export async function createCategory(name) {
     return result.data;
 }
 
+
+//update an existing category by id
 export async function updateCategory(id, name) {
     const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
         method: "PUT",
@@ -28,6 +32,7 @@ export async function updateCategory(id, name) {
     return result.data;
 }
 
+//delete an existing category by id
 export async function deleteCategory(id) {
     const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
         method: "DELETE",

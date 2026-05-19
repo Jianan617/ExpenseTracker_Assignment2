@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 
+//find user by username or email
 async function findByUsernameOrEmail(identifier) {
     const [rows] = await pool.query(
         `SELECT id, username, email, password_hash, role, created_at, updated_at
@@ -11,6 +12,7 @@ async function findByUsernameOrEmail(identifier) {
     return rows[0] || null;
 }
 
+//find user by id
 async function findById(id) {
     const [rows] = await pool.query(
         `SELECT id, username, email, role, created_at, updated_at
@@ -21,6 +23,7 @@ async function findById(id) {
     return rows[0] || null;
 }
 
+//create a new user and return it
 async function createUser({ username, email, password_hash, role = "User" }) {
     const [result] = await pool.query(
         `INSERT INTO users (username, email, password_hash, role)
@@ -30,6 +33,7 @@ async function createUser({ username, email, password_hash, role = "User" }) {
     return findById(result.insertId);
 }
 
+//return all users
 async function getAllUsers() {
     const [rows] = await pool.query(
         `SELECT id, username, email, role, created_at, updated_at
@@ -39,6 +43,7 @@ async function getAllUsers() {
     return rows;
 }
 
+//update one user
 async function updateUser(id, { username, email, role }) {
     const [result] = await pool.query(
         `UPDATE users
@@ -50,11 +55,13 @@ async function updateUser(id, { username, email, role }) {
     return findById(id);
 }
 
+//delete a user
 async function deleteUser(id) {
     const [result] = await pool.query(`DELETE FROM users WHERE id = ?`, [id]);
     return result.affectedRows > 0;
 }
 
+//count total number of admin
 async function countAdmins() {
     const [rows] = await pool.query(`SELECT COUNT(*) AS count FROM users WHERE role = 'Admin'`);
     return rows[0].count;

@@ -3,23 +3,35 @@ import { loginUser, registerUser } from "../services/authService.js";
 
 export default function LoginPage({ onAuthenticated }) {
     const [mode, setMode] = useState("login");
-    const [identifier, setIdentifier] = useState("admin");
+
+    //login form fields, identifier contains username or email
+    const [identifier, setIdentifier] = useState("");
+
+    //register form fields
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("admin123");
+
+    //password field used for both login and register
+    const [password, setPassword] = useState("");
+
+    //store application state
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    //check current form mode
     const isLogin = mode === "login";
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         try {
+            //start loading and clear previous errors
             setLoading(true);
             setError("");
+            //call login API or register API based on current mode
             const authenticatedUser = isLogin
                 ? await loginUser(identifier, password)
                 : await registerUser(username, email, password);
+            //notify parent component that authentication succeeded
             onAuthenticated(authenticatedUser);
         } catch (e) {
             setError(e.message || "Authentication failed.");
@@ -46,13 +58,13 @@ export default function LoginPage({ onAuthenticated }) {
                     {isLogin ? (
                         <div className="form-field">
                             <label htmlFor="identifier">Username or Email</label>
-                            <input id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="admin" />
+                            <input id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)}/>
                         </div>
                     ) : (
                         <>
                             <div className="form-field">
                                 <label htmlFor="username">Username</label>
-                                <input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="newuser" />
+                                <input id="username" value={username} onChange={(e) => setUsername(e.target.value)}/>
                             </div>
                             <div className="form-field">
                                 <label htmlFor="email">Email</label>

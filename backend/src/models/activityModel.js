@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 
+//create an activity log
 async function createActivity(userId, action, details = "") {
     if (!userId) return null;
     const [result] = await pool.query(
@@ -10,6 +11,7 @@ async function createActivity(userId, action, details = "") {
     return result.insertId;
 }
 
+//return all activity logs
 async function getAllActivities() {
     const [rows] = await pool.query(
         `SELECT a.id, a.user_id, u.username, u.email, a.action, a.details, a.created_at

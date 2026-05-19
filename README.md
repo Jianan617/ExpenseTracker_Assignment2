@@ -2,19 +2,18 @@
 
 ## Project Description
 
-Advanced Expense Tracker is a single-page expense management web application. It allows users to register, log in, create and manage their own expense records, search and filter expenses in real time, and view monthly spending trends. The system also includes an Admin role that can manage users, manage categories, view all users' expense records, and review user activity logs.
+Advanced Expense Tracker is a single-page expense management web application. It allows users to register, log in, create and manage their own expense records, search and filter expenses in real time, and view monthly spending trends. 
+The system also includes an Admin role that can manage users, manage categories, view all users' expense records, and review user activity logs.
 
-The project extends the original Expense Tracker into a more complete real-world web application by adding authentication, role-based access control, activity tracking, and multiple database entities.
+The project extends the original Expense Tracker into a more complete web application by adding authentication, role-based access control, activity tracking, and multiple database entities.
 
-## Technology Stack
+## Technologies
 
 ### Frontend
 - React
 - Vite
 - JavaScript
 - CSS
-- Fetch API
-- Local Storage for client-side session persistence
 
 ### Backend
 - Node.js
@@ -95,7 +94,7 @@ ExpenseTracker/
 │   │   ├── utils/           # Password hashing, token signing, validation
 │   │   ├── app.js           # Express app configuration
 │   │   └── server.js        # Server entry point
-│   ├── .env.example
+│   ├── .env                 # Environment configuration
 │   └── package.json
 │
 ├── frontend/
@@ -112,71 +111,6 @@ ExpenseTracker/
 │   └── expense_tracker_assignment2.sql
 │
 └── README.md
-```
-
-## How to Run the Application
-
-### 1. Import the Database
-
-Open MySQL and run:
-
-```sql
-SOURCE database/expense_tracker_assignment2.sql;
-```
-
-Alternatively, import the SQL file through MySQL Workbench or the IntelliJ IDEA Database tool.
-
-### 2. Configure Backend Environment
-
-Copy the example environment file:
-
-```bash
-cd backend
-cp .env .env
-```
-
-Then update `.env` with your own MySQL details:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=expense_tracker
-DB_PORT=3306
-PORT=5000
-JWT_SECRET=replace_this_with_a_long_random_secret
-```
-
-Do not commit `.env` to GitHub.
-
-### 3. Install and Run Backend
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-The backend runs on:
-
-```text
-http://localhost:5000
-```
-
-### 4. Install and Run Frontend
-
-Open another terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The frontend runs on the URL shown by Vite, usually:
-
-```text
-http://localhost:5173
 ```
 
 ## Demo Accounts
@@ -219,7 +153,7 @@ password: user123
 
 ## Workload Allocation
 
-This is an individual assignment.
+This is an individual work.
 
 Student: Jianan Huang
 
@@ -232,12 +166,4 @@ Main work completed:
 - Category management
 - Admin user management
 - User activity logs
-- README and submission preparation
-
-## Professional Practice Notes
-
-- Sensitive environment variables are stored in `.env` and should not be committed.
-- `.env.example` is provided to show required configuration fields.
-- API routes use validation and error handling.
-- User passwords are not stored as plain text.
-- Admin-only routes are protected by role-based middleware.
+- README

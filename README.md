@@ -84,33 +84,33 @@ The project uses four conceptual entities:
 
 ```text
 ExpenseTracker/
-├── backend/
-│   ├── src/
-│   │   ├── config/          # MySQL database connection
-│   │   ├── controllers/     # Request handling and business flow
-│   │   ├── middleware/      # Authentication and admin access middleware
-│   │   ├── models/          # Database query functions
-│   │   ├── routes/          # API endpoint definitions
-│   │   ├── utils/           # Password hashing, token signing, validation
-│   │   ├── app.js           # Express app configuration
-│   │   └── server.js        # Server entry point
-│   ├── .env                 # Environment configuration
-│   └── package.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # Reusable modal components
-│   │   ├── pages/           # Login, expenses, and admin pages
-│   │   ├── services/        # API request functions
-│   │   ├── styles/          # Global CSS
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
-│
-├── database/
-│   └── expense_tracker_assignment2.sql
-│
-└── README.md
+    backend/
+        src/
+            config/          # MySQL database connection
+            controllers/     # Request handling and business flow
+            middleware/      # Authentication and admin access middleware
+            models/          # Database query functions
+            routes/          # API endpoint definitions
+            utils/           # Password hashing, token signing, validation
+            app.js           # Express app configuration
+            server.js        # Server entry point
+        .env                 # Environment configuration
+        package.json
+
+    frontend/
+        src/
+            components/      # Reusable modal components
+            pages/           # Login, expenses, and admin pages
+            services/        # API request functions
+            styles/          # Global CSS
+            App.jsx
+            main.jsx
+        package.json
+
+    database/
+        expense_tracker_assignment2.sql
+
+    README.md
 ```
 
 ## Demo Accounts

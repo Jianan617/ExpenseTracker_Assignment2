@@ -597,7 +597,7 @@ textarea {
 .action-cell .edit-btn,
 .action-cell .delete-btn {
     width: 90px;
-    height: 46px;
+    height: 52px;
     padding: 0;
     margin-bottom: 0;
     display: inline-flex;
@@ -687,6 +687,13 @@ textarea {
     min-width: 150px;
 }
 
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) {
+    width: 230px;
+    min-width: 230px;
+    white-space: nowrap;
+}
+
 .category-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -716,6 +723,19 @@ textarea {
     color: #1d4ed8;
     font-size: 0.8rem;
     font-weight: 800;
+}
+
+.activity-log-scroll {
+    max-height: 310px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.activity-log-scroll .expense-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8fafc;
 }
 
 @media (max-width: 1120px) {

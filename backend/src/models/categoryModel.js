@@ -52,7 +52,7 @@ async function deleteCategory(id) {
     const [usedRows] = await pool.query(`SELECT COUNT(*) AS count FROM expenses WHERE category = ?`, [rows[0].name]);
     //if the category is used in existing expenses, it can not be deleted
     if (usedRows[0].count > 0) {
-        const error = new Error("This category is used by existing expenses and cannot be deleted.");
+        const error = new Error("This category cannot be deleted when it's used by existing expenses.");
         error.code = "CATEGORY_IN_USE";
         throw error;
     }

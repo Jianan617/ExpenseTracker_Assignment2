@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { deleteUser, getActivities, getUsers, updateUser } from "../services/adminService.js";
 import { createCategory, deleteCategory, getCategories, updateCategory } from "../services/categoryService.js";
+import DeleteConfirmModal from "../components/DeleteConfirmModal.jsx";
 
 //format database datetime into local date and/or time.
 function formatDateTime(value) {
@@ -28,6 +29,19 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
     const [error, setError] = useState("");
     const [feedback, setFeedback] = useState("");
 
+    //store current delete target for user/category delete modal
+    const [deleteDialog, setDeleteDialog] = useState({
+        open: false,
+        type: "",
+        item: null,
+    });
+
+    //track delete request loading state
+    const [deleting, setDeleting] = useState(false);
+
+    //store delete error shown inside confirmation modal
+    const [deleteError, setDeleteError] = useState("");
+
     //load users, activity logs and categories together
     const loadAdminData = async () => {
         try {
@@ -49,6 +63,28 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
     useEffect(() => {
         loadAdminData();
     }, []);
+
+    //open delete confirmation modal
+    const openDeleteDialog = (type, item) => {
+        setError("");
+        setDeleteError("");
+        setDeleteDialog({
+            open: true,
+            type,
+            item,
+        });
+    };
+
+    //close delete confirmation modal
+    const closeDeleteDialog = () => {
+        if (deleting) return;
+        setDeleteDialog({
+            open: false,
+            type: "",
+            item: null,
+        });
+        setDeleteError("");
+    };
 
     //show temporary success message
     const showFeedback = (message) => {
@@ -78,19 +114,6 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
-    //delete selected user after confirmation
-    const handleDeleteUser = async (item) => {
-        if (!window.confirm(`Delete user "${item.username}"?`)) return;
-        try {
-            await deleteUser(item.id);
-            //reload list after deletion
-            await loadAdminData();
-            showFeedback(`User "${item.username}" was deleted.`);
-        } catch (e) {
-            setError(e.message || "Failed to delete user.");
-        }
-    };
-
     //create a new category
     const handleCreateCategory = async () => {
         if (!newCategoryName.trim()) return;
@@ -117,16 +140,37 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
         }
     };
 
-    //delete selected category
-    const handleDeleteCategory = async (category) => {
-        if (!window.confirm(`Delete category "${category.name}"?`)) return;
+    //confirm delete action for either user or category
+    const handleConfirmDelete = async () => {
+        const { type, item } = deleteDialog;
+        if (!item) return;
+
         try {
-            await deleteCategory(category.id);
-            //reload categories after deletion
-            await loadAdminData();
-            showFeedback(`Category "${category.name}" was deleted.`);
+            setDeleting(true);
+            setError("");
+
+            if (type === "user") {
+                await deleteUser(item.id);
+                await loadAdminData();
+                showFeedback(`User "${item.username}" was deleted.`);
+            }
+
+            if (type === "category") {
+                await deleteCategory(item.id);
+                await loadAdminData();
+                showFeedback(`Category "${item.name}" was deleted.`);
+            }
+
+            setDeleteDialog({
+                open: false,
+                type: "",
+                item: null,
+            });
         } catch (e) {
-            setError(e.message || "Failed to delete category.");
+            //show delete failure inside the modal
+            setDeleteError(e.message || "Failed to delete item.");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -180,7 +224,7 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
                                             <td>{formatDateTime(item.created_at)}</td>
                                             <td className="action-cell">
                                                 <button className="edit-btn" onClick={() => handleSaveUser(item)}>Save</button>
-                                                <button className="delete-btn" onClick={() => handleDeleteUser(item)}>Delete</button>
+                                                <button className="delete-btn" onClick={() => openDeleteDialog("user", item)}>Delete</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -206,7 +250,7 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
                                     <input value={category.name} onChange={(e) => updateLocalCategoryName(category.id, e.target.value)} />
                                     <div className="category-actions">
                                         <button className="edit-btn" onClick={() => handleSaveCategory(category)}>Save</button>
-                                        <button className="delete-btn" onClick={() => handleDeleteCategory(category)}>Delete</button>
+                                        <button className="delete-btn" onClick={() => openDeleteDialog("category", category)}>Delete</button>
                                     </div>
                                 </div>
                             ))}
@@ -218,33 +262,63 @@ export default function AdminPanel({ user, onNavigate, onLogout }) {
                             <h2>User Activity Logs</h2>
                             <p>Records login, logout and CRUD actions for accountability.</p>
                         </div>
-                        <div className="table-wrapper">
+                        <div className="table-wrapper activity-log-scroll">
                             <table className="expense-table">
                                 <thead>
-                                    <tr>
-                                        <th>User</th>
-                                        <th>Action</th>
-                                        <th>Details</th>
-                                        <th>Time</th>
-                                    </tr>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>Time</th>
+                                </tr>
                                 </thead>
                                 <tbody>
-                                    {activities.length === 0 ? (
-                                        <tr className="empty-result-row"><td colSpan="4">No activity logs yet.</td></tr>
-                                    ) : activities.map((activity) => (
-                                        <tr key={activity.id}>
-                                            <td>{activity.username}</td>
-                                            <td><span className="activity-badge">{activity.action}</span></td>
-                                            <td>{activity.details || "-"}</td>
-                                            <td>{formatDateTime(activity.created_at)}</td>
-                                        </tr>
-                                    ))}
+                                {activities.length === 0 ? (
+                                    <tr className="empty-result-row">
+                                        <td colSpan="4">No activity logs yet.</td>
+                                    </tr>
+                                ) : activities.map((activity) => (
+                                    <tr key={activity.id}>
+                                        <td>{activity.username}</td>
+                                        <td><span className="activity-badge">{activity.action}</span></td>
+                                        <td>{activity.details || "-"}</td>
+                                        <td>{formatDateTime(activity.created_at)}</td>
+                                    </tr>
+                                ))}
                                 </tbody>
                             </table>
                         </div>
                     </section>
                 </>
             )}
+
+            <DeleteConfirmModal
+                open={deleteDialog.open}
+                title={
+                    deleteDialog.type === "user"
+                        ? "Delete User"
+                        : "Delete Category"
+                }
+                itemLabel={
+                    deleteDialog.type === "user"
+                        ? deleteDialog.item?.username
+                        : deleteDialog.item?.name
+                }
+                message={
+                    deleteDialog.type === "user"
+                        ? `Are you sure you want to delete user "${deleteDialog.item?.username}"?`
+                        : `Are you sure you want to delete category "${deleteDialog.item?.name}"?`
+                }
+                warning={
+                    deleteDialog.type === "user"
+                        ? "This will remove the user account and related user data."
+                        : "This action cannot be undone."
+                }
+                deleting={deleting}
+                error={deleteError}
+                onClose={closeDeleteDialog}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }

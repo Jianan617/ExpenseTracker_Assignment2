@@ -1,0 +1,14 @@
+{
+  "name": "advanced-expense-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Advanced Expense Tracker with React, Node.js, Express and MySQL",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": ["react", "node", "express", "mysql", "expense-tracker"],
+  "author": "Jianan Huang",
+  "license": "ISC"
+}

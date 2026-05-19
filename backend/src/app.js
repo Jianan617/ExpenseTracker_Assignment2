@@ -11,9 +11,10 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.json({ message: "Advanced Expense Tracker API is running" });
+    res.json({ message: "Expense Tracker API is running" });
 });
 
+//redirect to the relevant routes
 app.use("/api/auth", authRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/categories", categoryRoutes);

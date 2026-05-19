@@ -1,7 +1,9 @@
+//use regular expression to verify email format
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
+//verify the data input is valid
 function validateExpensePayload(payload) {
     const title = String(payload.title || "").trim();
     const category = String(payload.category || "").trim();

@@ -4,34 +4,44 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal.jsx";
 import { createExpense, deleteExpense, getAllExpenses, updateExpense } from "../services/expenseService.js";
 import { getCategories } from "../services/categoryService.js";
 
+//format amount as AUD currency
 function formatCurrency(value) {
     return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value || 0));
 }
 
+//format date for table display
 function formatDate(dateStr) {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" });
 }
 
+//format date into month label for trend section
 function formatMonthLabel(dateStr) {
     return new Date(dateStr).toLocaleDateString("en-AU", { year: "numeric", month: "short" });
 }
 
 export default function ExpensesPage({ user, onNavigate, onLogout }) {
+    //store expense and category data from backend
     const [expenses, setExpenses] = useState([]);
     const [categories, setCategories] = useState([]);
+
+    //store application state
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [feedback, setFeedback] = useState("");
 
+    //modal states for create, edit and delete actions
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingExpense, setDeletingExpense] = useState(null);
+
+    //loading states for form submit and delete confirm
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
+    //search, filter and sort states
     const [searchInput, setSearchInput] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All Categories");
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -40,10 +50,12 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
     const [dateSort, setDateSort] = useState("default");
     const [showDateDropdown, setShowDateDropdown] = useState(false);
 
+    //refs are used to detect clicks outside dropdowns
     const categoryDropdownRef = useRef(null);
     const amountDropdownRef = useRef(null);
     const dateDropdownRef = useRef(null);
 
+    //build category options from backend category list
     const categoryOptions = useMemo(() => ["All Categories", ...categories.map((category) => category.name)], [categories]);
     const amountSortOptions = [
         { label: "Default", value: "default" },
@@ -57,19 +69,25 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
     ];
 
     useEffect(() => {
+        //close filter dropdowns when user clicks outside them
         const handleClickOutside = (event) => {
             if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) setShowCategoryDropdown(false);
             if (amountDropdownRef.current && !amountDropdownRef.current.contains(event.target)) setShowAmountDropdown(false);
             if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) setShowDateDropdown(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
+
+        //clean up event listener when component unmounts
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    //load expenses and categories from backend
     const fetchPageData = async () => {
         try {
             setLoading(true);
             setError("");
+
+            //fetch expenses and categories in parallel
             const [expenseData, categoryData] = await Promise.all([getAllExpenses(), getCategories()]);
             setExpenses(expenseData);
             setCategories(categoryData);
@@ -80,30 +98,43 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         }
     };
 
+    //load page data when component first renders
     useEffect(() => {
         fetchPageData();
     }, []);
 
+    //apply live search, category filter and sorting
     const filteredExpenses = useMemo(() => {
         const keyword = searchInput.trim().toLowerCase();
         let filtered = expenses.filter((expense) => {
+
+            //match keyword against title, description or owner username
             const matchesKeyword = !keyword
                 || String(expense.title || "").toLowerCase().includes(keyword)
                 || String(expense.description || "").toLowerCase().includes(keyword)
                 || String(expense.username || "").toLowerCase().includes(keyword);
+
+            //match selected category
             const matchesCategory = selectedCategory === "All Categories" || expense.category === selectedCategory;
             return matchesKeyword && matchesCategory;
         });
 
+        //sort by amount if selected
         if (amountSort === "desc") filtered = [...filtered].sort((a, b) => Number(b.amount) - Number(a.amount));
         if (amountSort === "asc") filtered = [...filtered].sort((a, b) => Number(a.amount) - Number(b.amount));
+
+        //sort by date if selected
         if (dateSort === "desc") filtered = [...filtered].sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date));
         if (dateSort === "asc") filtered = [...filtered].sort((a, b) => new Date(a.expense_date) - new Date(b.expense_date));
         return filtered;
     }, [expenses, searchInput, selectedCategory, amountSort, dateSort]);
 
-    const totalAmount = useMemo(() => filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0), [filteredExpenses]);
+    //calculate total amount from currently visible expenses
+    const totalAmount = useMemo(() =>
+        filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0), [filteredExpenses]
+    );
 
+    //group filtered expenses by month for trend display
     const monthlyTrendData = useMemo(() => {
         const monthlyMap = {};
         filteredExpenses.forEach((expense) => {
@@ -115,20 +146,25 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         return Object.values(monthlyMap).sort((a, b) => b.key.localeCompare(a.key));
     }, [filteredExpenses]);
 
+    //find max monthly total for trend bar width calculation
     const maxMonthlyAmount = useMemo(() => {
         if (monthlyTrendData.length === 0) return 0;
         return Math.max(...monthlyTrendData.map((item) => item.total));
     }, [monthlyTrendData]);
 
+    //show temporary success feedback
     const showFeedback = (message) => {
         setFeedback(message);
         setTimeout(() => setFeedback(""), 3500);
     };
 
+    //create a new expense through backend API
     const handleCreateExpense = async (formData) => {
         try {
             setSubmitting(true);
             await createExpense(formData);
+
+            //refresh table after creation
             await fetchPageData();
             setShowCreateModal(false);
             showFeedback(`Expense "${formData.title}" was added successfully.`);
@@ -137,10 +173,13 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         }
     };
 
+    //update selected expense through backend API
     const handleUpdateExpense = async (formData) => {
         try {
             setSubmitting(true);
             await updateExpense(editingExpense.id, formData);
+
+            //refresh table after update
             await fetchPageData();
             setShowEditModal(false);
             setEditingExpense(null);
@@ -150,11 +189,14 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         }
     };
 
+    //delete selected expense through backend API
     const handleDeleteExpense = async () => {
         try {
             if (!deletingExpense) return;
             setDeleting(true);
             await deleteExpense(deletingExpense.id);
+
+            //refresh table after deletion
             await fetchPageData();
             setShowDeleteModal(false);
             showFeedback(`Expense "${deletingExpense.title}" was deleted successfully.`);

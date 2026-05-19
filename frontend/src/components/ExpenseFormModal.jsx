@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+//default form values for creating a new expense
 const initialForm = {
     title: "",
     category: "",
@@ -8,19 +9,23 @@ const initialForm = {
     description: "",
 };
 
+//convert database date value to yyyy-mm-dd for date input
 function formatDateForInput(value) {
     if (!value) return "";
     return String(value).slice(0, 10);
 }
 
 export default function ExpenseFormModal({ open, mode = "create", expense, categories = [], onClose, onSubmit, submitting }) {
+    //store current form input values
     const [formData, setFormData] = useState(initialForm);
+    //store backend submit error message
     const [submitError, setSubmitError] = useState("");
 
     useEffect(() => {
         if (!open) return;
         if (mode === "edit" && expense) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+            //fill form with selected expense data in edit mode
+            //eslint-disable-next-line react-hooks/set-state-in-effect
             setFormData({
                 title: expense.title || "",
                 category: expense.category || "",
@@ -29,36 +34,50 @@ export default function ExpenseFormModal({ open, mode = "create", expense, categ
                 description: expense.description || "",
             });
         } else {
+            //reset form and select the first available category in create mode
             setFormData({ ...initialForm, category: categories[0]?.name || "" });
         }
+        //clear previous submit error when modal opens
         setSubmitError("");
     }, [open, mode, expense, categories]);
 
     const errors = useMemo(() => {
         const nextErrors = {};
+        //validate required title
         if (!formData.title.trim()) nextErrors.title = "Title is required.";
+        //validate required category
         if (!formData.category.trim()) nextErrors.category = "Category is required.";
+
         if (formData.amount === "") {
             nextErrors.amount = "Amount is required.";
         } else if (Number.isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
+            //validate amount as a positive number
             nextErrors.amount = "Amount must be a positive number.";
         }
+        //validate required date
         if (!formData.expense_date) nextErrors.expense_date = "Date is required.";
         return nextErrors;
     }, [formData]);
 
+    //form can only be submitted when there are no validation errors
     const isValid = Object.keys(errors).length === 0;
 
     const handleChange = (event) => {
         const { name, value } = event.target;
+
+        //update the changed field by input name
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (event) => {
+        //prevent browser page refresh
         event.preventDefault();
+        //stop submission if frontend validation fails
         if (!isValid) return;
         try {
             setSubmitError("");
+
+            //send cleaned form data to parent submit handler
             await onSubmit({
                 title: formData.title.trim(),
                 category: formData.category,
@@ -67,10 +86,12 @@ export default function ExpenseFormModal({ open, mode = "create", expense, categ
                 description: formData.description.trim(),
             });
         } catch (error) {
+            //show backend or API error message
             setSubmitError(error.message || "Unable to save this expense.");
         }
     };
 
+    //do not render modal when it is closed
     if (!open) return null;
 
     return (

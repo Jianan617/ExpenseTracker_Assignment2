@@ -1,16 +1,20 @@
 import API_BASE_URL, { authHeaders, clearStoredSession, parseResponse, setStoredSession } from "./api";
 
+//send login request to the backend
 export async function loginUser(identifier, password) {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
+        //tell the backend that the request body is JSON
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),
     });
     const result = await parseResponse(response);
+    //store the returned token and user in localStorage
     setStoredSession(result.data);
     return result.data.user;
 }
 
+//send registration request to the backend
 export async function registerUser(username, email, password) {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",

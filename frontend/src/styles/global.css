@@ -738,6 +738,31 @@ textarea {
     background: #f8fafc;
 }
 
+.owner-filter-dropdown {
+    min-width: 240px;
+    max-height: 320px;
+    overflow: hidden;
+}
+
+.owner-filter-search {
+    width: 100%;
+    padding: 9px 10px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.owner-filter-list {
+    max-height: 210px;
+    overflow-y: auto;
+}
+
+.owner-filter-empty {
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
 @media (max-width: 1120px) {
     .page-shell {
         min-width: 0;

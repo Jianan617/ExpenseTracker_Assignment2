@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import ExpenseFormModal from "../components/ExpenseFormModal.jsx";
 import DeleteConfirmModal from "../components/DeleteConfirmModal.jsx";
-import { createExpense, deleteExpense, getAllExpenses, updateExpense } from "../services/expenseService.js";
-import { getCategories } from "../services/categoryService.js";
+import {createExpense, deleteExpense, getAllExpenses, updateExpense} from "../services/expenseService.js";
+import {getCategories} from "../services/categoryService.js";
 
 //format amount as AUD currency
 function formatCurrency(value) {
-    return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value || 0));
+    return new Intl.NumberFormat("en-AU", {style: "currency", currency: "AUD"}).format(Number(value || 0));
 }
 
 //format date for table display
 function formatDate(dateStr) {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" });
+    return new Date(dateStr).toLocaleDateString("en-AU", {year: "numeric", month: "short", day: "numeric"});
 }
 
 //format date into month label for trend section
 function formatMonthLabel(dateStr) {
-    return new Date(dateStr).toLocaleDateString("en-AU", { year: "numeric", month: "short" });
+    return new Date(dateStr).toLocaleDateString("en-AU", {year: "numeric", month: "short"});
 }
 
-export default function ExpensesPage({ user, onNavigate, onLogout }) {
+export default function ExpensesPage({user, onNavigate, onLogout}) {
     //store expense and category data from backend
     const [expenses, setExpenses] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -50,34 +50,47 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
     const [dateSort, setDateSort] = useState("default");
     const [showDateDropdown, setShowDateDropdown] = useState(false);
 
+    //owner filter is only used by Admin to view one user's expenses
+    const [selectedOwner, setSelectedOwner] = useState("All Owners");
+    const [showOwnerDropdown, setShowOwnerDropdown] = useState(false);
+    const [ownerSearchInput, setOwnerSearchInput] = useState("");
+
     //refs are used to detect clicks outside dropdowns
     const categoryDropdownRef = useRef(null);
     const amountDropdownRef = useRef(null);
     const dateDropdownRef = useRef(null);
+    //ref for closing owner dropdown when clicking outside.
+    const ownerDropdownRef = useRef(null);
 
     //build category options from backend category list
     const categoryOptions = useMemo(() => ["All Categories", ...categories.map((category) => category.name)], [categories]);
     const amountSortOptions = [
-        { label: "Default", value: "default" },
-        { label: "High to Low", value: "desc" },
-        { label: "Low to High", value: "asc" },
+        {label: "Default", value: "default"},
+        {label: "High to Low", value: "desc"},
+        {label: "Low to High", value: "asc"},
     ];
     const dateSortOptions = [
-        { label: "Default", value: "default" },
-        { label: "Oldest to Newest", value: "asc" },
-        { label: "Newest to Oldest", value: "desc" },
+        {label: "Default", value: "default"},
+        {label: "Oldest to Newest", value: "asc"},
+        {label: "Newest to Oldest", value: "desc"},
     ];
 
     useEffect(() => {
-        //close filter dropdowns when user clicks outside them
         const handleClickOutside = (event) => {
-            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) setShowCategoryDropdown(false);
-            if (amountDropdownRef.current && !amountDropdownRef.current.contains(event.target)) setShowAmountDropdown(false);
-            if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) setShowDateDropdown(false);
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+                setShowCategoryDropdown(false);
+            }
+            if (amountDropdownRef.current && !amountDropdownRef.current.contains(event.target)) {
+                setShowAmountDropdown(false);
+            }
+            if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
+                setShowDateDropdown(false);
+            }
+            if (ownerDropdownRef.current && !ownerDropdownRef.current.contains(event.target)) {
+                setShowOwnerDropdown(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
-
-        //clean up event listener when component unmounts
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
@@ -116,7 +129,9 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
 
             //match selected category
             const matchesCategory = selectedCategory === "All Categories" || expense.category === selectedCategory;
-            return matchesKeyword && matchesCategory;
+            //admin can filter expenses by owner
+            const matchesOwner = user.role !== "Admin" || selectedOwner === "All Owners" || expense.username === selectedOwner;
+            return matchesKeyword && matchesCategory && matchesOwner;
         });
 
         //sort by amount if selected
@@ -127,7 +142,26 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         if (dateSort === "desc") filtered = [...filtered].sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date));
         if (dateSort === "asc") filtered = [...filtered].sort((a, b) => new Date(a.expense_date) - new Date(b.expense_date));
         return filtered;
-    }, [expenses, searchInput, selectedCategory, amountSort, dateSort]);
+    }, [expenses, searchInput, selectedCategory, selectedOwner, amountSort, dateSort, user.role]);
+
+    //build unique owner list from all expense records
+    const ownerOptions = useMemo(() => {
+        const ownerSet = new Set();
+        expenses.forEach((expense) => {
+            if (expense.username) {
+                ownerSet.add(expense.username);
+            }
+        });
+        return Array.from(ownerSet).sort((a, b) => a.localeCompare(b));
+    }, [expenses]);
+
+    //show only matching owners in the dropdown based on search input
+    const visibleOwnerOptions = useMemo(() => {
+        const keyword = ownerSearchInput.trim().toLowerCase();
+        return ownerOptions
+            .filter((owner) => owner.toLowerCase().includes(keyword))
+            .slice(0, 6);
+    }, [ownerOptions, ownerSearchInput]);
 
     //calculate total amount from currently visible expenses
     const totalAmount = useMemo(() =>
@@ -140,7 +174,7 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
         filteredExpenses.forEach((expense) => {
             const date = new Date(expense.expense_date);
             const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-            if (!monthlyMap[key]) monthlyMap[key] = { key, label: formatMonthLabel(expense.expense_date), total: 0 };
+            if (!monthlyMap[key]) monthlyMap[key] = {key, label: formatMonthLabel(expense.expense_date), total: 0};
             monthlyMap[key].total += Number(expense.amount);
         });
         return Object.values(monthlyMap).sort((a, b) => b.key.localeCompare(a.key));
@@ -216,7 +250,8 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
                     <p className="header-subtitle">Logged in as {user.username} ({user.role})</p>
                 </div>
                 <div className="header-actions">
-                    {user.role === "Admin" && <button className="light-btn" onClick={() => onNavigate("admin")}>Admin Panel</button>}
+                    {user.role === "Admin" &&
+                        <button className="light-btn" onClick={() => onNavigate("admin")}>Admin Panel</button>}
                     <button className="light-btn" onClick={onLogout}>Logout</button>
                 </div>
             </header>
@@ -251,10 +286,11 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
                                 <div className="trend-item-left">
                                     <span className="trend-month">{item.label}</span>
                                     <div className="trend-bar-track">
-                                        <div className="trend-bar-fill" style={{ width: maxMonthlyAmount ? `${(item.total / maxMonthlyAmount) * 100}%` : "0%" }} />
+                                        <div className="trend-bar-fill" style={{width: maxMonthlyAmount ? `${(item.total / maxMonthlyAmount) * 100}%` : "0%"}}/>
                                     </div>
                                 </div>
-                                <div className="trend-item-right"><strong className="trend-amount">{formatCurrency(item.total)}</strong></div>
+                                <div className="trend-item-right">
+                                    <strong className="trend-amount">{formatCurrency(item.total)}</strong></div>
                             </div>
                         ))}
                     </div>
@@ -267,10 +303,10 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
                 <div className="section-header section-header-row">
                     <div>
                         <h2>All Expenses</h2>
-                        <p>{user.role === "Admin" ? "Admin can view all users' expense records." : "You can create, update and delete your own expense records."}</p>
+                        <p>{user.role === "Admin" ? "Admin can view all users' expense records and filter them by owner." : "You can create, update and delete your own expense records."}</p>
                     </div>
                     <div className="title-actions">
-                        <input className="search-input" placeholder="Search title, note or user" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+                        <input className="search-input" placeholder="Search title, note or user" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}/>
                         <button className="add-btn" onClick={() => setShowCreateModal(true)}>+ New</button>
                     </div>
                 </div>
@@ -281,86 +317,170 @@ export default function ExpensesPage({ user, onNavigate, onLogout }) {
                     <div className="table-wrapper">
                         <table className="expense-table">
                             <thead>
-                                <tr>
-                                    <th>Title</th>
+                            <tr>
+                                <th>Title</th>
+                                <th className="table-header-cell">
+                                    <div className="table-header-filter-wrapper" ref={categoryDropdownRef}>
+                                        <button type="button" className="table-header-filter-btn" onClick={() => setShowCategoryDropdown((prev) => !prev)}>
+                                            {selectedCategory === "All Categories" ? "Category" : `Category: ${selectedCategory}`}
+                                            <span className="table-header-filter-arrow">{showCategoryDropdown ? "▲" : "▼"}</span>
+                                        </button>
+                                        {showCategoryDropdown && (
+                                            <div className="table-header-dropdown">
+                                                {categoryOptions.map((category) => (
+                                                    <button key={category} type="button" className="table-header-dropdown-item" onClick={() => {
+                                                        setSelectedCategory(category);
+                                                        setShowCategoryDropdown(false);
+                                                    }}>
+                                                        {category}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
+                                <th className="table-header-cell">
+                                    <div className="table-header-filter-wrapper" ref={amountDropdownRef}>
+                                        <button type="button" className="table-header-filter-btn" onClick={() => setShowAmountDropdown((prev) => !prev)}>
+                                            {amountSort === "default" ? "Amount" : amountSort === "desc" ? "Amount: High to Low" : "Amount: Low to High"}
+                                            <span className="table-header-filter-arrow">{showAmountDropdown ? "▲" : "▼"}</span>
+                                        </button>
+                                        {showAmountDropdown && (
+                                            <div className="table-header-dropdown">
+                                                {amountSortOptions.map((option) => (
+                                                    <button key={option.value} type="button" className="table-header-dropdown-item" onClick={() => {
+                                                        setAmountSort(option.value);
+                                                        setShowAmountDropdown(false);
+                                                    }}>{option.label}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
+                                <th className="table-header-cell">
+                                    <div className="table-header-filter-wrapper" ref={dateDropdownRef}>
+                                        <button type="button" className="table-header-filter-btn" onClick={() => setShowDateDropdown((prev) => !prev)}>
+                                            {dateSort === "default" ? "Date" : dateSort === "asc" ? "Date: Oldest to Newest" : "Date: Newest to Oldest"}
+                                            <span className="table-header-filter-arrow">{showDateDropdown ? "▲" : "▼"}</span>
+                                        </button>
+                                        {showDateDropdown && (
+                                            <div className="table-header-dropdown">
+                                                {dateSortOptions.map((option) => (
+                                                    <button key={option.value} type="button" className="table-header-dropdown-item" onClick={() => {
+                                                        setDateSort(option.value);
+                                                        setShowDateDropdown(false);
+                                                    }}>{option.label}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </th>
+                                {user.role === "Admin" && (
                                     <th className="table-header-cell">
-                                        <div className="table-header-filter-wrapper" ref={categoryDropdownRef}>
-                                            <button type="button" className="table-header-filter-btn" onClick={() => setShowCategoryDropdown((prev) => !prev)}>
-                                                {selectedCategory === "All Categories" ? "Category" : `Category: ${selectedCategory}`}
-                                                <span className="table-header-filter-arrow">{showCategoryDropdown ? "▲" : "▼"}</span>
+                                        <div className="table-header-filter-wrapper" ref={ownerDropdownRef}>
+                                            <button
+                                                type="button"
+                                                className="table-header-filter-btn"
+                                                onClick={() => setShowOwnerDropdown((prev) => !prev)}
+                                            >
+                                                {selectedOwner === "All Owners" ? "Owner" : `Owner: ${selectedOwner}`}
+                                                <span className="table-header-filter-arrow">
+                                                    {showOwnerDropdown ? "▲" : "▼"}
+                                                </span>
                                             </button>
-                                            {showCategoryDropdown && (
-                                                <div className="table-header-dropdown">
-                                                    {categoryOptions.map((category) => (
-                                                        <button key={category} type="button" className="table-header-dropdown-item" onClick={() => { setSelectedCategory(category); setShowCategoryDropdown(false); }}>
-                                                            {category}
-                                                        </button>
-                                                    ))}
+
+                                            {showOwnerDropdown && (
+                                                <div className="table-header-dropdown owner-filter-dropdown">
+                                                    <input
+                                                        className="owner-filter-search"
+                                                        placeholder="Search username"
+                                                        value={ownerSearchInput}
+                                                        onChange={(e) => setOwnerSearchInput(e.target.value)}
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        className="table-header-dropdown-item"
+                                                        onClick={() => {
+                                                            setSelectedOwner("All Owners");
+                                                            setOwnerSearchInput("");
+                                                            setShowOwnerDropdown(false);
+                                                        }}
+                                                    >
+                                                        All Owners
+                                                    </button>
+
+                                                    <div className="owner-filter-list">
+                                                        {visibleOwnerOptions.length === 0 ? (
+                                                            <div className="owner-filter-empty">No users found.</div>
+                                                        ) : (
+                                                            visibleOwnerOptions.map((owner) => (
+                                                                <button
+                                                                    key={owner}
+                                                                    type="button"
+                                                                    className="table-header-dropdown-item"
+                                                                    onClick={() => {
+                                                                        setSelectedOwner(owner);
+                                                                        setOwnerSearchInput("");
+                                                                        setShowOwnerDropdown(false);
+                                                                    }}
+                                                                >
+                                                                    {owner}
+                                                                </button>
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </th>
-                                    <th className="table-header-cell">
-                                        <div className="table-header-filter-wrapper" ref={amountDropdownRef}>
-                                            <button type="button" className="table-header-filter-btn" onClick={() => setShowAmountDropdown((prev) => !prev)}>
-                                                {amountSort === "default" ? "Amount" : amountSort === "desc" ? "Amount: High to Low" : "Amount: Low to High"}
-                                                <span className="table-header-filter-arrow">{showAmountDropdown ? "▲" : "▼"}</span>
-                                            </button>
-                                            {showAmountDropdown && (
-                                                <div className="table-header-dropdown">
-                                                    {amountSortOptions.map((option) => (
-                                                        <button key={option.value} type="button" className="table-header-dropdown-item" onClick={() => { setAmountSort(option.value); setShowAmountDropdown(false); }}>{option.label}</button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </th>
-                                    <th className="table-header-cell">
-                                        <div className="table-header-filter-wrapper" ref={dateDropdownRef}>
-                                            <button type="button" className="table-header-filter-btn" onClick={() => setShowDateDropdown((prev) => !prev)}>
-                                                {dateSort === "default" ? "Date" : dateSort === "asc" ? "Date: Oldest to Newest" : "Date: Newest to Oldest"}
-                                                <span className="table-header-filter-arrow">{showDateDropdown ? "▲" : "▼"}</span>
-                                            </button>
-                                            {showDateDropdown && (
-                                                <div className="table-header-dropdown">
-                                                    {dateSortOptions.map((option) => (
-                                                        <button key={option.value} type="button" className="table-header-dropdown-item" onClick={() => { setDateSort(option.value); setShowDateDropdown(false); }}>{option.label}</button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </th>
-                                    {user.role === "Admin" && <th>Owner</th>}
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
+                                )}
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {filteredExpenses.length === 0 ? (
-                                    <tr className="empty-result-row"><td colSpan={user.role === "Admin" ? 7 : 6}>No expenses match the current filters.</td></tr>
-                                ) : filteredExpenses.map((expense) => (
-                                    <tr key={expense.id}>
-                                        <td><strong>{expense.title}</strong></td>
-                                        <td>{expense.category}</td>
-                                        <td>{formatCurrency(expense.amount)}</td>
-                                        <td>{formatDate(expense.expense_date)}</td>
-                                        {user.role === "Admin" && <td>{expense.username}</td>}
-                                        <td>{expense.description || "-"}</td>
-                                        <td className="action-cell">
-                                            <button className="edit-btn" onClick={() => { setEditingExpense(expense); setShowEditModal(true); }}>Edit</button>
-                                            <button className="delete-btn" onClick={() => { setDeletingExpense(expense); setShowDeleteModal(true); }}>Delete</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                            {filteredExpenses.length === 0 ? (
+                                <tr className="empty-result-row">
+                                    <td colSpan={user.role === "Admin" ? 7 : 6}>No expenses match the current filters.</td>
+                                </tr>
+                            ) : filteredExpenses.map((expense) => (
+                                <tr key={expense.id}>
+                                    <td><strong>{expense.title}</strong></td>
+                                    <td>{expense.category}</td>
+                                    <td>{formatCurrency(expense.amount)}</td>
+                                    <td>{formatDate(expense.expense_date)}</td>
+                                    {user.role === "Admin" && <td>{expense.username}</td>}
+                                    <td>{expense.description || "-"}</td>
+                                    <td className="action-cell">
+                                        <button className="edit-btn" onClick={() => {
+                                            setEditingExpense(expense);
+                                            setShowEditModal(true);
+                                        }}>Edit
+                                        </button>
+                                        <button className="delete-btn" onClick={() => {
+                                            setDeletingExpense(expense);
+                                            setShowDeleteModal(true);
+                                        }}>Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                             </tbody>
                         </table>
                     </div>
                 )}
             </section>
 
-            <ExpenseFormModal open={showCreateModal} mode="create" categories={categories} onClose={() => setShowCreateModal(false)} onSubmit={handleCreateExpense} submitting={submitting} />
-            <ExpenseFormModal open={showEditModal} mode="edit" expense={editingExpense} categories={categories} onClose={() => { setShowEditModal(false); setEditingExpense(null); }} onSubmit={handleUpdateExpense} submitting={submitting} />
-            <DeleteConfirmModal open={showDeleteModal} expense={deletingExpense} deleting={deleting} onClose={() => { setShowDeleteModal(false); setDeletingExpense(null); }} onConfirm={handleDeleteExpense} />
+            <ExpenseFormModal open={showCreateModal} mode="create" categories={categories} onClose={() => setShowCreateModal(false)} onSubmit={handleCreateExpense} submitting={submitting}/>
+            <ExpenseFormModal open={showEditModal} mode="edit" expense={editingExpense} categories={categories} onClose={() => {
+                setShowEditModal(false);
+                setEditingExpense(null);
+            }} onSubmit={handleUpdateExpense} submitting={submitting}/>
+            <DeleteConfirmModal open={showDeleteModal} expense={deletingExpense} deleting={deleting} onClose={() => {
+                setShowDeleteModal(false);
+                setDeletingExpense(null);
+            }} onConfirm={handleDeleteExpense}/>
         </div>
     );
 }
